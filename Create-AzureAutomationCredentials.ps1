@@ -64,19 +64,16 @@
     [String]$Password
 )
 
-    $ErrorActionPreference = "SilentlyContinue"
-
     if (!(Get-AzureRmContext).Account){
-        Write-Error "You need to be logged into your Azure Subscription using PowerShell cmdlet 'Login-AzureRmAccount' with a valid Azure Organization Id (and not @outlook.com or any other Microsoft Live Id) having required permissions to the Azure Automation Account and Resource Group"
-        return
+        throw "You need to be logged into your Azure Subscription. Aborting!"
     }
 
     # Form standardized name of the Azure Automation PS Credential for the Input credential Info
     $CredName = $CredentialName + $Suffix    
 
     # Get all the existing Azure Automation PS Credential for the Input credential Info
-    $CredsCollection = Get-AzureRmAutomationCredential -ResourceGroupName $AzureAutomationResourceGroupName -AutomationAccountName $AzureAutomationAccountName
-    
+    $CredsCollection = Get-AzureRmAutomationCredential -ResourceGroupName $AzureAutomationResourceGroupName -AutomationAccountName $AzureAutomationAccountName -ErrorAction "SilentlyContinue"
+
     if ($CredsCollection)
     {
         # Iterate through all existing Automation PS Credential to check for presence of that for the Input credential Info
@@ -85,7 +82,7 @@
             if ($credItem.Name -eq $CredName)
             {
                 $Cred = $credItem
-                break
+                return 0
             }
         }
     }
@@ -93,24 +90,20 @@
     # If Azure Automation PS Credential for the Input credential Info is null
     if (!$Cred)
     {
-        # Get Secure version of the Input Password
-        $SecurePassword = ConvertTo-SecureString $Password -AsPlainText -Force        
-        
-        # Form PS Credential Object from the Input User Name and Password
-        $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $UserName, $SecurePassword
-        
-        # Creat new Azure Automation PS Credential object for the Input credential Info
-        $vmAzureAutomationCredential = New-AzureRmAutomationCredential -AutomationAccountName $AzureAutomationAccountName -Name $CredName -Value $Credential -ResourceGroupName $AzureAutomationResourceGroupName
-
-        if (!$vmAzureAutomationCredential)
+        try
         {
-            Write-Error "Unable to create Azure Automation Credential for {$CredentialName}."
-            return
+            # Get Secure version of the Input Password
+            $SecurePassword = ConvertTo-SecureString $Password -AsPlainText -Force
+            
+            # Form PS Credential Object from the Input User Name and Password
+            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $UserName, $SecurePassword
+            
+            # Creat new Azure Automation PS Credential object for the Input credential Info
+            $vmAzureAutomationCredential = New-AzureRmAutomationCredential -AutomationAccountName $AzureAutomationAccountName -Name $CredName -Value $Credential -ResourceGroupName $AzureAutomationResourceGroupName
         }
-        else {
-            return 
+        catch
+        {
+            Write-Error "Unable to create new Azure Automation Credential for VM {$CredentialName}. Exception: $($_.Exception)" 2> $null
+            return 1
         }
-    }
-    else {
-        return
     }
