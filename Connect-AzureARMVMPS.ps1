@@ -38,11 +38,6 @@ Param
 
 $ErrorActionPreference = "SilentlyContinue"
 
-if (!(Get-AzureRmContext).Account){
-    Write-Error "You need to be logged into your Azure Subscription using PowerShell cmdlet 'Login-AzureRmAccount' with a valid Azure Organization Id (and not @outlook.com or any other Microsoft Live Id) having required permissions to the Azure Automation Account and Resource Group"
-    return
-}
-
 # Get the VM we need to configure
 $VM = Get-AzureRmVM -ResourceGroupName $ResourceGroupName -Name $VMName
 
