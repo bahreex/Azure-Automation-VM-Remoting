@@ -10,13 +10,6 @@
     setup a connection to the Azure subscription, get the public IP Address of the VM, and remote into it to for execution of whatever commands/script needs to be executed there.
     You also need to pass the script to be executed on the VMs as an Inline string.
 
-.PARAMETER AzureSubscriptionId
-    SubscriptionId of the Azure subscription to connect to for remoting into the VM(s)
-    
-.PARAMETER AzureOrgIdCredentialName
-    A credential containing an Org Id username / password with access to this Azure subscription. It requires the Azure Automation Credential Asset Name.
-    The underlying Azure Org ID used here should have access to all those relevant Azure Resource Groups, which contain the VMs you want to remote Into
-
 .PARAMETER KeyVaultName
     Name of the Azure KeyVault, where username/password for each of the VMs are stored. 
     Assuming Username and Passwords for each VM are stored in Azure Keyvault in the format - Name = <VM Name>, Secret = <Domain:Username:Password> (Domain can be empty) 
@@ -37,26 +30,20 @@
     Name of the VM you want to remote Into. this parameter cannot be specified without it's Resource group in the $ResourceGroupName parameter, or else will throw error  
 
 .EXAMPLE
-    Execute-AzureVMRemoting -AzureSubscriptionId "1019**********************" -AzureOrgIdCredentialName "admin" -KeyVaultName "CoreKV1" -AzureAutomationAccountName "Automation-AC1" -AzureAutomationResourceGroupName "Automation-RG1" -ResourceGroupName "RG1" -VMName "VM01"  -RemoteScript "Write-Output 'Hello World!'"
+    Execute-AzureVMRemoting -KeyVaultName "CoreKV1" -AzureAutomationAccountName "Automation-AC1" -AzureAutomationResourceGroupName "Automation-RG1" -ResourceGroupName "RG1" -VMName "VM01"  -RemoteScript "Write-Output 'Hello World!'"
     
 .Notes
     Author: Arjun Bahree
     E-mail: arjun.bahree@gmail.com
     Creation Date: 6/Dec/2017
-    Last Revision Date: 15/Dec/2017
-    Version: 3.0
+    Last Revision Date: 17/Dec/2017
+    Version: 4.0
     Development Environment: Azure Automation Runbook Editor and VS Code IDE
     PS Version: 5.1
     Platform: Windows
 #>
 
 param(
-
-    [Parameter(Mandatory=$true)] 
-    [String]$AzureSubscriptionId,
-    
-    [Parameter(Mandatory=$true)] 
-    [String]$AzureOrgIdCredentialName,
 
     [Parameter(Mandatory=$true)] 
     [String]$KeyVaultName,
@@ -180,7 +167,7 @@ If (!$PSBoundParameters.ContainsKey('ResourceGroupName') -And !$PSBoundParameter
     }
     else
     {
-        Write-Output "There are no Resource Groups in the Azure Subscription {$AzureSubscriptionId}. Aborting..."
+        Write-Output "There are no Resource Groups in the Azure Subscription. Aborting..."
         return $null
     }
 }
