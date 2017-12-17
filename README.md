@@ -1,37 +1,21 @@
 # Azure-Automation-VM-Remoting
 _*Azure Automation Runbooks: Enabling/providing capability to remotely execute PowerShell commands/scripts on remote Windows based VM's in Azure*_
 
-Here is a set of PowerShell based Azure Automation Runbooks, which can be used to remote into one or more or *all* Windows Server VMs within
-an Azure Subscription, and remotely execute any PowerShell commands/scripts on those VMs.
+Here is a set of PowerShell based Azure Automation Runbooks, which can be used to remote into one or more or *all* Windows Server VMs within an Azure Subscription, and remotely execute any PowerShell commands/scripts on those VMs.
 
-By default, Azure RM VMs with any Azure marketplace based Windows Server OS do not have WinRM enabled/configured from within OS (Since advent of ARM model).
-Also any Azure NSG's applicable to these VMs do not allow any WinRM communication (over port 5986) by default. These Runbooks configure the VMs to enable
-WinRM on them, open access over WinRM, configure NSGs to allow WinRM over HTTPS, and enable the user to execute PowerShell commands/scripts remotely on
-these Azure VMs.
+By default, Azure RM VMs with any Azure marketplace based Windows Server OS do not have WinRM enabled/configured from within OS (Since advent of ARM model). Also any Azure NSG's applicable to these VMs do not allow any WinRM communication (over port 5986) by default. These Runbooks configure the VMs to enable WinRM on them, open access over WinRM, configure NSGs to allow WinRM over HTTPS, and enable the user to execute PowerShell commands/scripts remotely on these Azure VMs.
 
 ## Key pre-requisites:
 
 - The Azure VMs being targeted need to have Public IPs and Internet connection for them to be able to download the configuration scripts from a public Uri
 
-- If the Azure VMs bein targeted have only Private IPs, they need to be accessible from the Azure Org ID used
+- You need to have an Azure KeyVault (AKV) configured in your Azure subscription. This AKV will need to contain Passwords (as Secrets) corresponding to all your VMs you want to remote into. For the Name part, enter the VM name, for the value part, enter Password. You also need to give the Automation SPN used to authorize this script, access permissions on the AKV, without which the SPN won't be able to access any AKV secrets. Hence, you need to choose the "Secret Management" template in AKV under the "Access Permissions" section, and choose default 7 permissions already selected under "Secret Permissions" dropdown, and assign to the Automation SPN.
 
-- You need to have an Azure KeyVault (AKV) configured in your Azure subscription. This AKV will need to contain Passwords (as Secrets) corresponding to all your VMs you want
-  to remote into. For the Name part, enter the VM name, for the value part, enter Password. You also need to give the Azure Org ID you are using to run this script, access
-  permissions on the AKV, without which the Id won't be able to access any AKV secrets. Hence, you need to choose the "Secret Management" template in AKV under the
-  "Access Permissions" section, and choose default 7 permissions already selected under "Secret Permissions" dropdown.
+- You need to give the Automation SPN you are using to run this script, Contributor access to all the Resource Groups in your subscription, otherwise script will not be able to pull Information for the VMs in those resource groups
 
-- You need to give the Azure Org ID you are using to run this script, Contributor access to all the Resource Groups in your subscription, otherwise script will not
-  be able to pull Information for the VMs in those resource groups
+- You will need an Azure Automation (AA) Account already setup in your subscription, under whichever resource group you may want to. Within this AA account, AA Credentials for all VM users will be automatically managed by this script itself so you need not worry about them. Once the AA Credentials of a VM are created by the script, next time onwards those same credentials will be reused, without creating any duplicates. The nomenclature used for the Credential name is "<VM Name>--AACredential"
 
-- You will need an Azure Automation (AA) Account already setup in your subscription, under whichever resource group you may want to. Within this AA account, you will need
-  to first yourself create an AA Credential for the Azure Org Id you are using for running this script. The AA Credentials for all VM users will be automatically managed by 
-  this script itself so you need not worry about them. Once the AA Credentials of a VM are created by the script, next time onwards those same credentials will be reused,
-  without creating any duplicates. The nomenclature used for the Credential name is "<VM Name>--AACredential"
-
-- This version of the script works for both Azure VMs with Managed and Unmanaged disks. It does not rely on Azure Storage for storing the temporary script to configure the
-  VMs for PS Remoting by enabling WinRM through custom script extension within the VM. Instead, script for WinRm configuration in VMs comes from a publicly available Github
-  GIST file linked to my Github account hosting this repository itself. You are free to link to any publicly available Uri hosting the temporary script, if you do not want 
-  this script to link to my GIST file, for which you will need to as-is copy raw format of my GIST file from its location.
+- This version of the script works for both Azure VMs with Managed and Unmanaged disks. It does not rely on Azure Storage for storing the temporary script to configure the   VMs for PS Remoting by enabling WinRM through custom script extension within the VM. Instead, script for WinRm configuration in VMs comes from a publicly available Github GIST file linked to my Github account hosting this repository itself. You are free to link to any publicly available Uri hosting the temporary script, if you do not want this script to link to my GIST file, for which you will need to as-is copy raw format of my GIST file from its location.
 
 Below listed are the constituent Azure Automation runbooks, and their brief descriptions:
 
