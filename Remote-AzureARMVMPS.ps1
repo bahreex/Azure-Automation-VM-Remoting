@@ -52,7 +52,7 @@ param(
 
     try
     {   
-        $IpAddress = .\Connect-AzureVM.ps1 `
+        $IpAddress = .\Connect-AzureARMVMPS.ps1 `
             -VMName $VMName  `
             -ResourceGroupName $ResourceGroupName
                
