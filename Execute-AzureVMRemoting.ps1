@@ -148,7 +148,7 @@ param(
                             -Password $secret.SecretValueText
                             
                             # Call PS Script to Remote Into the VM in context
-                            .\Remote-AzureVM.ps1 -RemoteVMCredName $RemoteVMCredName `
+                            .\Remote-AzureARMVMPS.ps1 -RemoteVMCredName $RemoteVMCredName `
                             -ResourceGroupName $RGBaseName `
                             -VMName $VMBaseName `
                             -RemoteScript $RemoteScript
@@ -221,7 +221,7 @@ param(
 
 
                     # Call PS Script to Remote Into the VM in context
-                    .\Remote-AzureVM.ps1 -RemoteVMCredName $RemoteVMCredName `
+                    .\Remote-AzureARMVMPS.ps1 -RemoteVMCredName $RemoteVMCredName `
                     -ResourceGroupName $ResourceGroupName `
                     -VMName $VMBaseName `
                     -RemoteScript $RemoteScript
@@ -282,7 +282,7 @@ param(
                 -Password $secret.SecretValueText
     
                 # Call PS Script to Remote Into the VM in context
-                .\Remote-AzureVM.ps1 -RemoteVMCredName $RemoteVMCredName `
+                .\Remote-AzureARMVMPS.ps1 -RemoteVMCredName $RemoteVMCredName `
                 -ResourceGroupName $ResourceGroupName `
                 -VMName $VMBaseName `
                 -RemoteScript $RemoteScript
