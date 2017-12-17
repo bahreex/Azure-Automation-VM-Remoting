@@ -77,134 +77,77 @@ param(
     [String]$VMName	
 )
 
-        # Get the Azure Automation PS Credential corresponding to the Azure Org ID name. This Org ID should already exist in Azure AD before running this runbook
-        $AzureOrgIdCredential = Get-AutomationPSCredential -Name $AzureOrgIdCredentialName
+$connectionName = "AzureRunAsConnection"
+try
+{
+    # Get the connection "AzureRunAsConnection "
+    $servicePrincipalConnection=Get-AutomationConnection -Name $connectionName         
+
+    "Logging in to Azure..."
+    Add-AzureRmAccount `
+        -ServicePrincipal `
+        -TenantId $servicePrincipalConnection.TenantId `
+        -ApplicationId $servicePrincipalConnection.ApplicationId `
+        -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint 
+}
+catch {
+    if (!$servicePrincipalConnection)
+    {
+        $ErrorMessage = "Connection $connectionName not found."
+        throw $ErrorMessage
+    } else{
+        Write-Error -Message $_.Exception
+        throw $_.Exception
+    }
+}
+
+# Check if both Resource Groups and VM Name params are not passed
+If (!$PSBoundParameters.ContainsKey('ResourceGroupName') -And !$PSBoundParameters.ContainsKey('VMName'))
+{
+    # Get a list of all the Resource Groups in the Azure Subscription
+    $RGs = Get-AzureRmResourceGroup 
     
-        # Login into the specified Azure Subscription in a silent non-Interactive manner
-        $Login = Login-AzureRmAccount -Credential $AzureOrgIdCredential
-   
-        # Select the Azure subscription we will be working against
-        $Subscription = Select-AzureRmSubscription -SubscriptionId $AzureSubscriptionId        
-   
-        # Check if both Resource Groups and VM Name params are not passed
-        If (!$PSBoundParameters.ContainsKey('ResourceGroupName') -And !$PSBoundParameters.ContainsKey('VMName'))
+    # Check if there are Resource Groups in the current Azure Subscription
+    if ($RGs)
+    {        
+        # Iterate through all the Resource Groups in the Azure Subscription        
+        foreach ($rg in $RGs)
         {
-            # Get a list of all the Resource Groups in the Azure Subscription
-            $RGs = Get-AzureRmResourceGroup 
+            $RGBaseName = $rg.ResourceGroupName
             
-            # Check if there are Resource Groups in the current Azure Subscription
-            if ($RGs)
-            {        
-                # Iterate through all the Resource Groups in the Azure Subscription        
-                foreach ($rg in $RGs)
-                {
-                    $RGBaseName = $rg.ResourceGroupName
-                 
-                    # Get a list of all the VMs in the specific Resource Group for this Iteration
-                    $VMs = Get-AzureRmVm -ResourceGroupName $RGBaseName
+            # Get a list of all the VMs in the specific Resource Group for this Iteration
+            $VMs = Get-AzureRmVm -ResourceGroupName $RGBaseName
 
-                    if ($VMs)
-                    {
-                        # Iterate through all the VMs within the specific Resource Group for this Iteration
-                        foreach ($vm in $VMs)
-                        {
-                            $VMBaseName = $vm.Name
-
-                            $OSX = .\Get-AzureRMVMOSType.ps1 -ResourceGroupName $RGBaseName -VMName $VMBaseName
-                            
-                            if ($OSX -eq "Linux")
-                            {
-                                Write-Output "The VM {$VMBaseName} in Resource Group {$RGBaseName} is on $OSX OS. Hence, cannot process further since only Windows OS supported. Skipping forward."
-                                continue
-                            }
-
-                            $VMState = .\Get-AzureRMVMState.ps1 -ResourceGroupName $RGBaseName -VMName $VMBaseName -State "PowerState"
-                            
-                            if ($VMState)
-                            {
-                                if ($VMState -eq "deallocated")
-                                {
-                                    Write-Output "The VM {$VMBaseName} in Resource Group {$RGBaseName} is currently Deallocated. Hence, cannot get IP address, and skipping."
-                                    continue
-                                }
-                            }
-                            else {
-                                Write-Output "Unable to determine PowerState of the VM {$VMBaseName} in Resource Group {$RGBaseName}. Hence, cannot get IP address. Skipping forward"
-                                continue
-                            }
-
-    
-                            # Form standardized name of the Azure Automation PS Credential for the VM in context
-                            $RemoteVMCredName = $VMBaseName + "-AACredential"
-                            
-                            # For the VM in context, extract the corresponding username/password from Azure KeyVault
-                            $secret = Get-AzureKeyVaultSecret -VaultName $KeyVaultName -Name $VMBaseName
-
-                            # Call the script to check if the Azure Automation Credential for the VM in context alredy exists, and create a new one if absent
-                            $SetCredentials = .\Create-AzureAutomationCredentials.ps1 -AzureAutomationAccountName $AzureAutomationAccountName `
-                            -AzureAutomationResourceGroupName $AzureAutomationResourceGroupName `
-                            -CredentialName $VMBaseName `
-                            -UserName $vm.oSProfile.AdminUsername `
-                            -Password $secret.SecretValueText
-                            
-                            # Call PS Script to Remote Into the VM in context
-                            .\Remote-AzureARMVMPS.ps1 -RemoteVMCredName $RemoteVMCredName `
-                            -ResourceGroupName $RGBaseName `
-                            -VMName $VMBaseName `
-                            -RemoteScript $RemoteScript
-
-
-                        }
-                    }
-                    else
-                    {
-                        Write-Output "There are no VMs in the Resource Group {$RGBaseName}. Continuing with next Resource Group, if any."
-                        continue
-                    }
-                }
-            }
-            else
-            {
-                Write-Output "There are no Resource Groups in the Azure Subscription {$AzureSubscriptionId}. Aborting..."
-                return $null
-            }
-        }
-        # Check if only Resource Group param is passed, but not the VM Name param
-        Elseif ($PSBoundParameters.ContainsKey('ResourceGroupName') -And !$PSBoundParameters.ContainsKey('VMName'))
-        {
-    
-            # Get a list of all the VMs in the specific Resource Group
-            $VMs = Get-AzureRmVm -ResourceGroupName $ResourceGroupName
-            
             if ($VMs)
             {
-            # Iterate through all the VMs within the specific Resource Group for this Iteration
+                # Iterate through all the VMs within the specific Resource Group for this Iteration
                 foreach ($vm in $VMs)
                 {
                     $VMBaseName = $vm.Name
 
-                    $OSX = .\Get-AzureRMVMOSType.ps1 -ResourceGroupName $ResourceGroupName -VMName $VMBaseName
+                    $OSX = .\Get-AzureRMVMOSType.ps1 -ResourceGroupName $RGBaseName -VMName $VMBaseName
                     
                     if ($OSX -eq "Linux")
                     {
-                        Write-Output "The VM {$VMBaseName} in Resource Group {$ResourceGroupName} is on $OSX OS. Hence, cannot process further since only Windows OS supported. Skipping forward."
+                        Write-Output "The VM {$VMBaseName} in Resource Group {$RGBaseName} is on $OSX OS. Hence, cannot process further since only Windows OS supported. Skipping forward."
                         continue
                     }
 
-                    $VMState = .\Get-AzureRMVMState.ps1 -ResourceGroupName $ResourceGroupName -VMName $VMBaseName -State "PowerState"
+                    $VMState = .\Get-AzureRMVMState.ps1 -ResourceGroupName $RGBaseName -VMName $VMBaseName -State "PowerState"
                     
                     if ($VMState)
                     {
                         if ($VMState -eq "deallocated")
                         {
-                            Write-Output "The VM {$VMBaseName} in Resource Group {$ResourceGroupName} is currently Deallocated. Hence, cannot get IP address, and skipping."
+                            Write-Output "The VM {$VMBaseName} in Resource Group {$RGBaseName} is currently Deallocated. Hence, cannot get IP address, and skipping."
                             continue
                         }
                     }
                     else {
-                        Write-Output "Unable to determine PowerState of the VM {$VMBaseName} in Resource Group {$ResourceGroupName}. Hence, cannot get IP address. Skipping forward"
+                        Write-Output "Unable to determine PowerState of the VM {$VMBaseName} in Resource Group {$RGBaseName}. Hence, cannot get IP address. Skipping forward"
                         continue
                     }
+
 
                     # Form standardized name of the Azure Automation PS Credential for the VM in context
                     $RemoteVMCredName = $VMBaseName + "-AACredential"
@@ -218,85 +161,157 @@ param(
                     -CredentialName $VMBaseName `
                     -UserName $vm.oSProfile.AdminUsername `
                     -Password $secret.SecretValueText
-
-
+                    
                     # Call PS Script to Remote Into the VM in context
                     .\Remote-AzureARMVMPS.ps1 -RemoteVMCredName $RemoteVMCredName `
-                    -ResourceGroupName $ResourceGroupName `
+                    -ResourceGroupName $RGBaseName `
                     -VMName $VMBaseName `
                     -RemoteScript $RemoteScript
 
+
                 }
             }
             else
             {
-                Write-Output "There are no Virtual Machines in Resource Group {$ResourceGroupName}. Aborting..."
-                return $null
+                Write-Output "There are no VMs in the Resource Group {$RGBaseName}. Continuing with next Resource Group, if any."
+                continue
             }
         }
-        # Check if both Resource Group and VM Name params are passed
-        Elseif ($PSBoundParameters.ContainsKey('ResourceGroupName') -And $PSBoundParameters.ContainsKey('VMName'))
+    }
+    else
+    {
+        Write-Output "There are no Resource Groups in the Azure Subscription {$AzureSubscriptionId}. Aborting..."
+        return $null
+    }
+}
+# Check if only Resource Group param is passed, but not the VM Name param
+Elseif ($PSBoundParameters.ContainsKey('ResourceGroupName') -And !$PSBoundParameters.ContainsKey('VMName'))
+{
+
+    # Get a list of all the VMs in the specific Resource Group
+    $VMs = Get-AzureRmVm -ResourceGroupName $ResourceGroupName
+    
+    if ($VMs)
+    {
+    # Iterate through all the VMs within the specific Resource Group for this Iteration
+        foreach ($vm in $VMs)
         {
-    
-            # Get the specified VM in the specific Resource Group
-            $vm = Get-AzureRmVm -ResourceGroupName $ResourceGroupName -Name $VMName
-    
-            if ($vm)
-            {    
-                $VMBaseName = $vm.Name
+            $VMBaseName = $vm.Name
 
-                $OSX = .\Get-AzureRMVMOSType.ps1 -ResourceGroupName $ResourceGroupName -VMName $VMBaseName
-                
-                if ($OSX -eq "Linux")
-                {
-                    Write-Output "The VM {$VMBaseName} in Resource Group {$ResourceGroupName} is on $OSX OS. Hence, cannot process further since only Windows OS supported. Skipping forward."
-                    continue
-                }
-
-                $VMState = .\Get-AzureRMVMState.ps1 -ResourceGroupName $ResourceGroupName -VMName $VMBaseName -State "PowerState"
-                
-                if ($VMState)
-                {
-                    if ($VMState -eq "deallocated")
-                    {
-                        Write-Output "The VM {$VMBaseName} in Resource Group {$ResourceGroupName} is currently Deallocated. Hence, cannot get IP address, and skipping."
-                        continue
-                    }
-                }
-                else {
-                    Write-Output "Unable to determine PowerState of the VM {$VMBaseName} in Resource Group {$ResourceGroupName}. Hence, cannot get IP address. Skipping forward"
-                    continue
-                }
-
-                # Form standardized name of the Azure Automation PS Credential for the VM in context
-                $RemoteVMCredName = $VMBaseName + "-AACredential"
-                
-                # For the VM in context, extract the corresponding username/password from Azure KeyVault
-                $secret = Get-AzureKeyVaultSecret -VaultName $KeyVaultName -Name $VMBaseName
-                
-                # Call the script to check if the Azure Automation Credential for the VM in context alredy exists, and create a new one if absent
-                $SetCredentials = .\Create-AzureAutomationCredentials.ps1 -AzureAutomationAccountName $AzureAutomationAccountName `
-                -AzureAutomationResourceGroupName $AzureAutomationResourceGroupName `
-                -CredentialName $VMBaseName `
-                -UserName $vm.oSProfile.AdminUsername `
-                -Password $secret.SecretValueText
-    
-                # Call PS Script to Remote Into the VM in context
-                .\Remote-AzureARMVMPS.ps1 -RemoteVMCredName $RemoteVMCredName `
-                -ResourceGroupName $ResourceGroupName `
-                -VMName $VMBaseName `
-                -RemoteScript $RemoteScript
-
-            }
-            else
+            $OSX = .\Get-AzureRMVMOSType.ps1 -ResourceGroupName $ResourceGroupName -VMName $VMBaseName
+            
+            if ($OSX -eq "Linux")
             {
-                Write-Output "There is no Virtual Machine named {$VMName} in Resource Group {$ResourceGroupName}. Aborting..."
-                return
+                Write-Output "The VM {$VMBaseName} in Resource Group {$ResourceGroupName} is on $OSX OS. Hence, cannot process further since only Windows OS supported. Skipping forward."
+                continue
+            }
+
+            $VMState = .\Get-AzureRMVMState.ps1 -ResourceGroupName $ResourceGroupName -VMName $VMBaseName -State "PowerState"
+            
+            if ($VMState)
+            {
+                if ($VMState -eq "deallocated")
+                {
+                    Write-Output "The VM {$VMBaseName} in Resource Group {$ResourceGroupName} is currently Deallocated. Hence, cannot get IP address, and skipping."
+                    continue
+                }
+            }
+            else {
+                Write-Output "Unable to determine PowerState of the VM {$VMBaseName} in Resource Group {$ResourceGroupName}. Hence, cannot get IP address. Skipping forward"
+                continue
+            }
+
+            # Form standardized name of the Azure Automation PS Credential for the VM in context
+            $RemoteVMCredName = $VMBaseName + "-AACredential"
+            
+            # For the VM in context, extract the corresponding username/password from Azure KeyVault
+            $secret = Get-AzureKeyVaultSecret -VaultName $KeyVaultName -Name $VMBaseName
+
+            # Call the script to check if the Azure Automation Credential for the VM in context alredy exists, and create a new one if absent
+            $SetCredentials = .\Create-AzureAutomationCredentials.ps1 -AzureAutomationAccountName $AzureAutomationAccountName `
+            -AzureAutomationResourceGroupName $AzureAutomationResourceGroupName `
+            -CredentialName $VMBaseName `
+            -UserName $vm.oSProfile.AdminUsername `
+            -Password $secret.SecretValueText
+
+
+            # Call PS Script to Remote Into the VM in context
+            .\Remote-AzureARMVMPS.ps1 -RemoteVMCredName $RemoteVMCredName `
+            -ResourceGroupName $ResourceGroupName `
+            -VMName $VMBaseName `
+            -RemoteScript $RemoteScript
+
+        }
+    }
+    else
+    {
+        Write-Output "There are no Virtual Machines in Resource Group {$ResourceGroupName}. Aborting..."
+        return $null
+    }
+}
+# Check if both Resource Group and VM Name params are passed
+Elseif ($PSBoundParameters.ContainsKey('ResourceGroupName') -And $PSBoundParameters.ContainsKey('VMName'))
+{
+
+    # Get the specified VM in the specific Resource Group
+    $vm = Get-AzureRmVm -ResourceGroupName $ResourceGroupName -Name $VMName
+
+    if ($vm)
+    {    
+        $VMBaseName = $vm.Name
+
+        $OSX = .\Get-AzureRMVMOSType.ps1 -ResourceGroupName $ResourceGroupName -VMName $VMBaseName
+        
+        if ($OSX -eq "Linux")
+        {
+            Write-Output "The VM {$VMBaseName} in Resource Group {$ResourceGroupName} is on $OSX OS. Hence, cannot process further since only Windows OS supported. Skipping forward."
+            continue
+        }
+
+        $VMState = .\Get-AzureRMVMState.ps1 -ResourceGroupName $ResourceGroupName -VMName $VMBaseName -State "PowerState"
+        
+        if ($VMState)
+        {
+            if ($VMState -eq "deallocated")
+            {
+                Write-Output "The VM {$VMBaseName} in Resource Group {$ResourceGroupName} is currently Deallocated. Hence, cannot get IP address, and skipping."
+                continue
             }
         }
-        # Check if Resource Group param is not passed, but VM Name param is passed
-        Elseif (!$PSBoundParameters.ContainsKey('ResourceGroupName') -And $PSBoundParameters.ContainsKey('VMName'))
-        {
-            Write-Output "VM Name parameter cannot be specified alone, without specifying its Resource Group Name parameter also. Aborting..."
-            return
-        }    
+        else {
+            Write-Output "Unable to determine PowerState of the VM {$VMBaseName} in Resource Group {$ResourceGroupName}. Hence, cannot get IP address. Skipping forward"
+            continue
+        }
+
+        # Form standardized name of the Azure Automation PS Credential for the VM in context
+        $RemoteVMCredName = $VMBaseName + "-AACredential"
+        
+        # For the VM in context, extract the corresponding username/password from Azure KeyVault
+        $secret = Get-AzureKeyVaultSecret -VaultName $KeyVaultName -Name $VMBaseName
+        
+        # Call the script to check if the Azure Automation Credential for the VM in context alredy exists, and create a new one if absent
+        $SetCredentials = .\Create-AzureAutomationCredentials.ps1 -AzureAutomationAccountName $AzureAutomationAccountName `
+        -AzureAutomationResourceGroupName $AzureAutomationResourceGroupName `
+        -CredentialName $VMBaseName `
+        -UserName $vm.oSProfile.AdminUsername `
+        -Password $secret.SecretValueText
+
+        # Call PS Script to Remote Into the VM in context
+        .\Remote-AzureARMVMPS.ps1 -RemoteVMCredName $RemoteVMCredName `
+        -ResourceGroupName $ResourceGroupName `
+        -VMName $VMBaseName `
+        -RemoteScript $RemoteScript
+
+    }
+    else
+    {
+        Write-Output "There is no Virtual Machine named {$VMName} in Resource Group {$ResourceGroupName}. Aborting..."
+        return
+    }
+}
+# Check if Resource Group param is not passed, but VM Name param is passed
+Elseif (!$PSBoundParameters.ContainsKey('ResourceGroupName') -And $PSBoundParameters.ContainsKey('VMName'))
+{
+    Write-Output "VM Name parameter cannot be specified alone, without specifying its Resource Group Name parameter also. Aborting..."
+    return
+}    
