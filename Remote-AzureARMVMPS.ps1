@@ -73,7 +73,7 @@ param(
     }
     catch
     {
-        Write-Output "Could not remote into the VM"
+        Write-Output "Could not remote into the VM..."
         Write-Output "Ensure that the VM is running and that the correct VM credentials are used to remote"
-        Write-Output "Error in getting the VM Details.: $($_.Exception.Message) "
+        Write-Output "Error in getting the VM Details: $($_.Exception.Message)"
     }
