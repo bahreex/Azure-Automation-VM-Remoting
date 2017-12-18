@@ -116,7 +116,7 @@ If (!$PSBoundParameters.ContainsKey('ResourceGroupName') -And !$PSBoundParameter
                     
                     if ($OSX -And $OSX -eq "Linux")
                     {
-                        Write-Verbose "The VM {$VMBaseName} in Resource Group {$RGBaseName} is on $OSX OS. Hence, cannot process further since only Windows OS supported. Skipping forward."
+                        Write-Output "The VM {$VMBaseName} in Resource Group {$RGBaseName} is on $OSX OS. Hence, cannot process further since only Windows OS supported. Skipping forward."
                         continue
                     }
                     
@@ -124,7 +124,7 @@ If (!$PSBoundParameters.ContainsKey('ResourceGroupName') -And !$PSBoundParameter
                     
                     if ($VMState -And $VMState -eq "deallocated")
                     {
-                        Write-Verbose "The VM {$VMBaseName} in Resource Group {$RGBaseName} is currently Deallocated. Hence, cannot get IP address, and skipping."
+                        Write-Output "The VM {$VMBaseName} in Resource Group {$RGBaseName} is currently Deallocated. Hence, cannot get IP address, and skipping."
                         continue
                     }
 
@@ -151,21 +151,21 @@ If (!$PSBoundParameters.ContainsKey('ResourceGroupName') -And !$PSBoundParameter
                     }
                     else
                     {
-                        Write-Verbose "Unable to get or set Azure Automation Credentials for VM {$VMBaseName}. Skipping forward..."
+                        Write-Output "Unable to get or set Azure Automation Credentials for VM {$VMBaseName}. Skipping forward..."
                         continue
                     }
                 }
             }
             else
             {
-                Write-Verbose "There are no VMs in the Resource Group {$RGBaseName}. Continuing with next Resource Group, if any."
+                Write-Output "There are no VMs in the Resource Group {$RGBaseName}. Continuing with next Resource Group, if any."
                 continue
             }
         }
     }
     else
     {
-        Write-Error "There are no Resource Groups in the Azure Subscription. Aborting..."
+        Write-Output "There are no Resource Groups in the Azure Subscription. Aborting..."
         return
     }
 }
@@ -186,7 +186,7 @@ Elseif ($PSBoundParameters.ContainsKey('ResourceGroupName') -And !$PSBoundParame
             
             if ($OSX -And $OSX -eq "Linux")
             {
-                Write-Verbose "The VM {$VMBaseName} in Resource Group {$ResourceGroupName} is on $OSX OS. Hence, cannot process further since only Windows OS supported. Skipping forward."
+                Write-Output "The VM {$VMBaseName} in Resource Group {$ResourceGroupName} is on $OSX OS. Hence, cannot process further since only Windows OS supported. Skipping forward."
                 continue
             }
 
@@ -194,7 +194,7 @@ Elseif ($PSBoundParameters.ContainsKey('ResourceGroupName') -And !$PSBoundParame
             
             if ($VMState -And $VMState -eq "deallocated")
             {
-                Write-Verbose "The VM {$VMBaseName} in Resource Group {$ResourceGroupName} is currently Deallocated. Hence, cannot get IP address, and skipping."
+                Write-Output "The VM {$VMBaseName} in Resource Group {$ResourceGroupName} is currently Deallocated. Hence, cannot get IP address, and skipping."
                 continue
             }
 
@@ -221,14 +221,14 @@ Elseif ($PSBoundParameters.ContainsKey('ResourceGroupName') -And !$PSBoundParame
             }
             else
             {
-                Write-Verbose "Unable to get or set Azure Automation Credentials for VM {$VMBaseName}. Skipping forward..."
+                Write-Output "Unable to get or set Azure Automation Credentials for VM {$VMBaseName}. Skipping forward..."
                 continue
             }
         }
     }
     else
     {
-        Write-Verbose "There are no Virtual Machines in Resource Group {$ResourceGroupName}. Aborting..."
+        Write-Output "There are no Virtual Machines in Resource Group {$ResourceGroupName}. Aborting..."
         return
     }
 }
@@ -247,7 +247,7 @@ Elseif ($PSBoundParameters.ContainsKey('ResourceGroupName') -And $PSBoundParamet
         
         if ($OSX -And $OSX -eq "Linux")
         {
-            Write-Verbose "The VM {$VMBaseName} in Resource Group {$ResourceGroupName} is on $OSX OS. Hence, cannot process further since only Windows OS supported. Skipping forward."
+            Write-Output "The VM {$VMBaseName} in Resource Group {$ResourceGroupName} is on $OSX OS. Hence, cannot process further since only Windows OS supported. Skipping forward."
             continue
         }
 
@@ -255,7 +255,7 @@ Elseif ($PSBoundParameters.ContainsKey('ResourceGroupName') -And $PSBoundParamet
         
         if ($VMState -And $VMState -eq "deallocated")
         {
-            Write-Verbose "The VM {$VMBaseName} in Resource Group {$ResourceGroupName} is currently Deallocated. Hence, cannot get IP address, and skipping."
+            Write-Output "The VM {$VMBaseName} in Resource Group {$ResourceGroupName} is currently Deallocated. Hence, cannot get IP address, and skipping."
             continue
         }
 
@@ -281,13 +281,13 @@ Elseif ($PSBoundParameters.ContainsKey('ResourceGroupName') -And $PSBoundParamet
             -RemoteScript $RemoteScript
         else
         {
-            Write-Verbose "Unable to get or set Azure Automation Credentials for VM {$VMBaseName}. Skipping forward..."
+            Write-Output "Unable to get or set Azure Automation Credentials for VM {$VMBaseName}. Skipping forward..."
             return
         }
     }
     else
     {
-        Write-Verbose "There is no Virtual Machine named {$VMName} in Resource Group {$ResourceGroupName}. Aborting..."
+        Write-Output "There is no Virtual Machine named {$VMName} in Resource Group {$ResourceGroupName}. Aborting..."
         return
     }
 }
