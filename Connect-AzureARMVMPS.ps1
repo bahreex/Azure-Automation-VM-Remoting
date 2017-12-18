@@ -123,11 +123,10 @@ if ($VM)
     {
         Write-Output "Couldnt get the IP Address of the VM"
         return
-    }  
-
+    }
 }
 else
 {
     Write-Output "VM not found"
     return
-}     
+}
