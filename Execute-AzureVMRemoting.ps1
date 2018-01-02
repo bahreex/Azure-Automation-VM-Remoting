@@ -279,6 +279,7 @@ Elseif ($PSBoundParameters.ContainsKey('ResourceGroupName') -And $PSBoundParamet
             -ResourceGroupName $ResourceGroupName `
             -VMName $VMBaseName `
             -RemoteScript $RemoteScript
+        }
         else
         {
             Write-Output "Unable to get or set Azure Automation Credentials for VM {$VMBaseName}. Skipping forward..."
